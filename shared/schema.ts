@@ -1,18 +1,33 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+// === Domain Types / DTOs ===
+
+export const tokenSchema = z.object({
+  symbol: z.string(),
+  name: z.string(),
+  address: z.string(),
+  decimals: z.number(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const tokenEntrySchema = z.object({
+  token: tokenSchema,
+  priceUSD: z.number(),
+  liquidityUSD: z.number(),
+  volumeUSD: z.number(),
+  marketCapUSD: z.number(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export const snapshotSchema = z.object({
+  timestamp: z.number(),
+  chain: z.string(), // "polygon" | "ethereum"
+  entries: z.array(tokenEntrySchema),
+});
+
+// Export types
+export type Token = z.infer<typeof tokenSchema>;
+export type TokenEntry = z.infer<typeof tokenEntrySchema>;
+export type Snapshot = z.infer<typeof snapshotSchema>;
+
+// === API Request/Response Types ===
+// Used by frontend to strict type responses
+export type SnapshotResponse = Snapshot;
