@@ -90,18 +90,17 @@ export class SnapshotService {
       let liquidity = 0;
 
       if (poolData) {
-        const state = poolStates.find((s: any) => s.address === poolData.address);
+        const state = poolStates.find((s: any) => s.address.toLowerCase() === poolData.address.toLowerCase());
         if (state) {
           const enrichedPool = { 
             ...poolData, 
             sqrtPriceX96: state.sqrtPriceX96, 
             liquidity: state.liquidity,
-            // Ensure token decimals are correct for pricing
-            token0: poolData.token0.address.toLowerCase() === metaAddress ? { ...meta } : { symbol: "USDC", name: "USD Coin", address: stableAddress, decimals: 6 },
-            token1: poolData.token1.address.toLowerCase() === metaAddress ? { ...meta } : { symbol: "USDC", name: "USD Coin", address: stableAddress, decimals: 6 }
+            token0: poolData.token0.address.toLowerCase() === meta.address.toLowerCase() ? { ...meta } : { symbol: "USDC", name: "USD Coin", address: stableAddress, decimals: 6 },
+            token1: poolData.token1.address.toLowerCase() === meta.address.toLowerCase() ? { ...meta } : { symbol: "USDC", name: "USD Coin", address: stableAddress, decimals: 6 }
           };
           price = computeSpotPrice(enrichedPool, meta.address, stableAddress);
-          liquidity = Number(state.liquidity) / 1e18; // Normalized liquidity
+          liquidity = Number(state.liquidity) / 1e18; 
         }
       }
 

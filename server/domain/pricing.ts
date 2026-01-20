@@ -22,13 +22,21 @@ export function computeSpotPrice(
   if (pool.sqrtPriceX96) {
     const sqrtPriceX96 = Number(pool.sqrtPriceX96);
     const Q96 = Math.pow(2, 96);
-    const price0 = Math.pow(sqrtPriceX96 / Q96, 2);
+    const priceRatio = Math.pow(sqrtPriceX96 / Q96, 2);
     
-    // Adjust for decimals: price0 is token1/token0
+    // Uniswap V3: priceRatio = (token1 / token0)
+    // To get price of token0 in terms of token1: price = priceRatio
+    // To get price of token1 in terms of token0: price = 1 / priceRatio
+    
+    // Adjust for decimals
     const decimalAdjustment = Math.pow(10, pool.token0.decimals - pool.token1.decimals);
-    const adjustedPrice0 = price0 * decimalAdjustment;
+    const adjustedPriceRatio = priceRatio * decimalAdjustment;
     
-    return isToken0 ? 1 / adjustedPrice0 : adjustedPrice0;
+    // If target is token0 (e.g. WETH), price in stable (token1) is adjustedPriceRatio
+    // If target is token1 (e.g. USDC), price in WETH (token0) is 1 / adjustedPriceRatio
+    const finalPrice = isToken0 ? adjustedPriceRatio : 1 / adjustedPriceRatio;
+    
+    return finalPrice;
   }
 
   // V2 Logic: Reserve-based

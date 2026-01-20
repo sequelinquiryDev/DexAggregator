@@ -45,20 +45,23 @@ export class EthersAdapter implements IChainAdapter {
 
   async getTopPools(limit: number): Promise<Pool[]> {
     try {
-      // Etherscan V2 Discovery: Query for top liquidity pools
-      // We'll use the tokenholderlist on the stable token as a proxy for pool discovery
-      // In a more advanced version, we'd use a dedicated V2 liquidity endpoint
-      const response = await fetch(`https://api.etherscan.io/v2/api?chainid=1&module=token&action=tokenholderlist&address=${this.stableTokenAddress}&apikey=${this.etherscanApiKey}`);
-      
-      if (!response.ok) return [];
-      
-      const data = await response.json();
-      if (data.status !== "1" || !Array.isArray(data.result)) return [];
+      // Direct known high-liquidity Uniswap V3 pool addresses for Ethereum
+      // Since Etherscan API is restricted, we'll use these verified pool addresses
+      const knownPools = [
+        "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640", // WETH/USDC 0.05%
+        "0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8", // WETH/USDC 0.3%
+        "0x11b81a04b0d8cd7460f33088e6e85ef610ee87ca", // WETH/USDT 0.05%
+        "0x4e68ccd0e5f129c0ad164741100d4c82c67759ff", // WETH/USDT 0.3%
+        "0x60594a40393a30f5832bd721244345d199b5ad1f", // WETH/DAI 0.05%
+        "0xc2e9f25be33638c030d947e133396c21a9a47361", // WBTC/WETH 0.05%
+        "0xcbc300c4e0965e630138d58c87895f36e319b0f4", // LINK/WETH 0.3%
+        "0x99ac8ca80195a51d03322c3b3e48242d0d37679b", // WBTC/USDC 0.3%
+        "0x290a6a7460b3d8c199047c3f33310408434a535f", // LINK/USDC 0.3%
+        "0x5777d92f208679db4b9778590fa3cab3ac9e2168", // DAI/USDC 0.01%
+        "0xa63b490aa02ee571997850107a8265d61993050d", // WBTC/USDT 0.3%
+        "0xfad57cc8ad19483c9068f6dcc00e885c7222046d"  // LINK/USDT 0.3%
+      ];
 
-      // Filter for addresses that look like pools (usually top holders of USDC)
-      const potentialPools = data.result.slice(0, limit).map((holder: any) => holder.address);
-      
-      // Fetch pool details (token0, token1) via Multicall
       const poolInterface = new ethers.Interface([
         "function token0() view returns (address)",
         "function token1() view returns (address)",
@@ -66,7 +69,7 @@ export class EthersAdapter implements IChainAdapter {
       ]);
 
       const multicall = new ethers.Contract(MULTICALL_ADDRESS, MULTICALL_ABI, this.provider);
-      const calls = potentialPools.flatMap((address: string) => [
+      const calls = knownPools.flatMap((address: string) => [
         { target: address, callData: poolInterface.encodeFunctionData("token0") },
         { target: address, callData: poolInterface.encodeFunctionData("token1") },
         { target: address, callData: poolInterface.encodeFunctionData("fee") }
@@ -75,23 +78,20 @@ export class EthersAdapter implements IChainAdapter {
       const [, returnData] = await multicall.aggregate(calls);
       
       const pools: Pool[] = [];
-      for (let i = 0; i < potentialPools.length; i++) {
+      for (let i = 0; i < knownPools.length; i++) {
         try {
-          const res = returnData[i * 3];
-          if (!res || res === "0x") continue;
+          const res0 = returnData[i * 3];
+          const res1 = returnData[i * 3 + 1];
+          const res2 = returnData[i * 3 + 2];
           
-          const t0 = poolInterface.decodeFunctionResult("token0", res)[0];
-          const t1 = poolInterface.decodeFunctionResult("token1", returnData[i * 3 + 1])[0];
-          const fee = poolInterface.decodeFunctionResult("fee", returnData[i * 3 + 2])[0];
+          if (!res0 || res0 === "0x" || !res1 || res1 === "0x" || !res2 || res2 === "0x") continue;
           
-          // Verify one of the tokens is our stable token
-          if (t0.toLowerCase() !== this.stableTokenAddress.toLowerCase() && 
-              t1.toLowerCase() !== this.stableTokenAddress.toLowerCase()) {
-            continue;
-          }
-
+          const t0 = poolInterface.decodeFunctionResult("token0", res0)[0];
+          const t1 = poolInterface.decodeFunctionResult("token1", res1)[0];
+          const fee = poolInterface.decodeFunctionResult("fee", res2)[0];
+          
           pools.push({
-            address: potentialPools[i],
+            address: knownPools[i],
             token0: { symbol: "...", name: "...", address: t0, decimals: 18 },
             token1: { symbol: "...", name: "...", address: t1, decimals: 18 },
             reserve0: BigInt(0),
@@ -103,6 +103,7 @@ export class EthersAdapter implements IChainAdapter {
         }
       }
       
+      console.log(`[BOOTSTRAP] Loaded ${pools.length} verified Uniswap V3 pools for price discovery`);
       return pools;
     } catch (error) {
       console.error(`Error fetching pools for ${this.chainName}:`, error);
@@ -117,7 +118,7 @@ export class EthersAdapter implements IChainAdapter {
     const poolInterface = new ethers.Interface(POOL_ABI);
 
     // Filter out invalid addresses
-    const validAddresses = poolAddresses.filter(addr => ethers.isAddress(addr));
+    const validAddresses = poolAddresses.filter((addr: string) => ethers.isAddress(addr));
     if (validAddresses.length === 0) return [];
 
     const calls = validAddresses.flatMap(address => [
