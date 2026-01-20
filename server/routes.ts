@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { api } from "@shared/routes";
 import { SnapshotService } from "./application/services/SnapshotService";
 import { MockAdapter } from "./infrastructure/adapters/MockAdapter";
+import { EthersAdapter } from "./infrastructure/adapters/EthersAdapter";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -11,7 +12,18 @@ export async function registerRoutes(
 
   // === Clean Architecture Setup ===
   // 1. Initialize Adapters (Infrastructure Layer)
-  const ethereumAdapter = new MockAdapter("ethereum");
+  
+  // Use Alchemy/Infura from secrets if available, otherwise fallback to Mock
+  const ethRpc = process.env.ALCHEMY_API_KEY 
+    ? `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+    : process.env.INFURA_API_KEY
+    ? `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`
+    : null;
+
+  const ethereumAdapter = ethRpc 
+    ? new EthersAdapter("ethereum", ethRpc, "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", process.env.ETHERSCAN1 || "")
+    : new MockAdapter("ethereum");
+
   const polygonAdapter = new MockAdapter("polygon");
 
   // 2. Initialize Service (Application Layer)
