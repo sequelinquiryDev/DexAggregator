@@ -1,15 +1,19 @@
-import { json } from 'body-parser';
 import express from 'express';
 import { registerRoutes } from './routes.ts';
 import { EthersAdapter } from './infrastructure/adapters/EthersAdapter';
 import { DiscoveryService } from './application/services/DiscoveryService';
 import { StorageService } from './application/services/StorageService';
+import { ControllerService } from './application/services/ControllerService.ts';
+import { DispatcherService } from './application/services/DispatcherService.ts';
+import { CacheService } from './application/services/CacheService.ts';
+import { RequestBatcher } from './application/services/RequestBatcher.ts';
 import http from 'http';
 
 const app = express();
 const server = http.createServer(app);
 
-app.use(json());
+// Replace body-parser with express.json()
+app.use(express.json());
 
 // Provide public RPC fallbacks for resilience
 const { ALCHEMY_API_KEY, INFURA_API_KEY, POLYGON_RPC_URL } = process.env;
@@ -41,9 +45,32 @@ const polygonProviders = [
 
 const ethersAdapter = new EthersAdapter(ethProviders, polygonProviders);
 const storageService = new StorageService();
+const cacheService = new CacheService();
+const dispatcherService = new DispatcherService();
 
-const discoveryService = new DiscoveryService(ethersAdapter, storageService);
-discoveryService.discover();
+const controllerService = new ControllerService(
+  ethersAdapter,
+  storageService,
+  cacheService,
+  dispatcherService
+);
+
+const requestBatcher = new RequestBatcher(controllerService);
+
+app.locals.storageService = storageService;
+app.locals.requestBatcher = requestBatcher;
+
+const discoveryService = new DiscoveryService(storageService, ethersAdapter);
+
+// Run pool discovery in the background
+(async () => {
+  try {
+    await discoveryService.discoverPools();
+    console.log('Initial pool discovery complete.');
+  } catch (error) {
+    console.error('Error during initial pool discovery:', error);
+  }
+})();
 
 // Register the routes
 registerRoutes(server, app);
