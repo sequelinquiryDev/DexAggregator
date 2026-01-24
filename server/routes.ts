@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { type Server } from "http";
-import { api } from "../../shared/routes";
+import { api } from "../shared/routes.ts";
 
 export async function registerRoutes(
   httpServer: Server,
