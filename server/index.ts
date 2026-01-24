@@ -43,9 +43,9 @@ const polygonProviders = [
   POLYGON_RPC_URL || 'https://polygon-rpc.com',
 ];
 
-const rpcProviders = {
-  1: ethProviders,
-  137: polygonProviders,
+const rpcProviders: { [chainId: number]: string } = {
+  1: ethProviders[0],
+  137: polygonProviders[0],
 };
 
 const ethersAdapter = new EthersAdapter(rpcProviders);

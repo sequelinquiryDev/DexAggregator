@@ -1,5 +1,5 @@
 import { Pool, Token } from "../../domain/entities";
-import { ethers } from "ethers";
+import { ethers, BaseContract } from "ethers";
 
 const MULTICALL_ADDRESS = "0xca11bde05977b3631167028862be2a173976ca11";
 const UNISWAP_V3_FACTORY = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
@@ -15,7 +15,7 @@ const FACTORY_ABI = [
 const POOL_ABI = [
   "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)",
   "function liquidity() view returns (uint128)",
-  "function getReserves() view returns (uint128, uint128)"
+  "function fee() view returns (uint24)"
 ];
 
 export class EthersAdapter {
@@ -27,7 +27,6 @@ export class EthersAdapter {
     for (const chainId in rpcUrls) {
       this.providers[chainId] = new ethers.JsonRpcProvider(rpcUrls[chainId]);
     }
-    // The factory address is the same for both Ethereum and Polygon
     this.factory = new ethers.Contract(UNISWAP_V3_FACTORY, FACTORY_ABI, this.providers[1]);
   }
 
@@ -39,20 +38,17 @@ export class EthersAdapter {
     return provider;
   }
 
-  async getPoolAddress(tokenA: Token, tokenB: Token, chainId: number): Promise<string | null> {
+  async getPoolAddress(tokenA: Token, tokenB: Token, chainId: number, fee: number): Promise<string | null> {
     const provider = this.getProvider(chainId);
     const factory = this.factory.connect(provider);
-    const feeTiers = [100, 500, 3000, 10000]; // Common Uniswap V3 fee tiers
-    for (const fee of feeTiers) {
-      const poolAddress = await factory.getPool(tokenA.address, tokenB.address, fee);
-      if (poolAddress && poolAddress !== "0x0000000000000000000000000000000000000000") {
-        return poolAddress;
-      }
+    const poolAddress = await (factory as BaseContract & { getPool: (a: string, b: string, c: number) => Promise<string> }).getPool(tokenA.address, tokenB.address, fee);
+    if (poolAddress && poolAddress !== "0x0000000000000000000000000000000000000000") {
+      return poolAddress;
     }
     return null;
   }
 
-  async getBatchPoolData(poolAddresses: string[], chainId: number): Promise<any[]> {
+  async getBatchPoolData(poolAddresses: string[], chainId: number): Promise<Pool[]> {
     if (poolAddresses.length === 0) return [];
 
     const provider = this.getProvider(chainId);
@@ -65,25 +61,28 @@ export class EthersAdapter {
     const calls = validAddresses.flatMap(address => [
       { target: address, callData: poolInterface.encodeFunctionData("slot0") },
       { target: address, callData: poolInterface.encodeFunctionData("liquidity") },
-      { target: address, callData: poolInterface.encodeFunctionData("getReserves") }
+      { target: address, callData: poolInterface.encodeFunctionData("fee") }
     ]);
 
     try {
       const [, returnData] = await multicall.aggregate(calls);
 
-      const results = [];
+      const results: Pool[] = [];
       for (let i = 0; i < validAddresses.length; i++) {
         try {
           const slot0Data = poolInterface.decodeFunctionResult("slot0", returnData[i * 3]);
           const liquidityData = poolInterface.decodeFunctionResult("liquidity", returnData[i * 3 + 1]);
-          const reservesData = poolInterface.decodeFunctionResult("getReserves", returnData[i * 3 + 2]);
+          const feeData = poolInterface.decodeFunctionResult("fee", returnData[i * 3 + 2]);
 
           results.push({
             address: validAddresses[i],
             sqrtPriceX96: BigInt(slot0Data.sqrtPriceX96.toString()),
             liquidity: BigInt(liquidityData[0].toString()),
-            reserve0: BigInt(reservesData[0].toString()),
-            reserve1: BigInt(reservesData[1].toString()),
+            reserve0: BigInt(0), // Not directly available in V3, needs calculation
+            reserve1: BigInt(0), // Not directly available in V3, needs calculation
+            token0: {} as Token, // Placeholder
+            token1: {} as Token, // Placeholder
+            feeTier: feeData[0],
           });
         } catch (e) {
           continue;
@@ -94,5 +93,29 @@ export class EthersAdapter {
       console.error("Multicall aggregate failed:", error);
       return [];
     }
+  }
+
+  async getChainId(): Promise<number> {
+    const network = await this.providers[1].getNetwork();
+    return Number(network.chainId);
+  }
+
+  async getPools(tokenA: Token, tokenB: Token): Promise<Pool[]> {
+    const chainId = tokenA.chainId;
+    const feeTiers = [100, 500, 3000, 10000];
+    const pools: Pool[] = [];
+
+    for (const fee of feeTiers) {
+      const poolAddress = await this.getPoolAddress(tokenA, tokenB, chainId, fee);
+
+      if (poolAddress) {
+        const poolData = await this.getBatchPoolData([poolAddress], chainId);
+        if (poolData.length > 0) {
+          pools.push({ ...poolData[0], token0: tokenA, token1: tokenB });
+        }
+      }
+    }
+
+    return pools;
   }
 }

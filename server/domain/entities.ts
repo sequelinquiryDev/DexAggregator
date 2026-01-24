@@ -9,6 +9,12 @@ export interface Token {
   chainId: number;
 }
 
+export interface PoolData {
+  tokenA: string;
+  tokenB: string;
+  address: string;
+}
+
 export interface Pool {
   address: string;
   token0: Token;

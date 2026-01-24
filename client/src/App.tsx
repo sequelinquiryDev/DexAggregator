@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Page } from './components/page';
+import Dashboard from './pages/Dashboard';
 import { routes } from './routes';
 
 const queryClient = new QueryClient();
@@ -7,7 +7,7 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Page routes={routes} />
+      <Dashboard />
     </QueryClientProvider>
   );
 }

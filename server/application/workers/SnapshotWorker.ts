@@ -1,5 +1,6 @@
 import { SnapshotService } from '../services/SnapshotService';
 import { StorageService } from '../services/StorageService';
+import { Pool } from '../../domain/entities';
 
 export class SnapshotWorker {
   private snapshotService: SnapshotService;
@@ -29,7 +30,22 @@ export class SnapshotWorker {
       console.log('Refreshing pool data...');
       const tokens = await this.storageService.getTokens();
       const pools = await this.snapshotService.bootstrapPools(tokens);
-      await this.storageService.savePools(pools);
+
+      // Group pools by chain ID
+      const poolsByChain: { [chainId: number]: Pool[] } = {};
+      for (const pool of pools) {
+        const chainId = pool.token0.chainId; // Assuming token0 and token1 have the same chainId
+        if (!poolsByChain[chainId]) {
+          poolsByChain[chainId] = [];
+        }
+        poolsByChain[chainId].push(pool);
+      }
+
+      // Save pools for each chain
+      for (const chainId in poolsByChain) {
+        await this.storageService.savePools(poolsByChain[chainId], Number(chainId));
+      }
+
       console.log('Pool data refreshed successfully.');
     } catch (error) {
       console.error('Error refreshing pool data:', error);

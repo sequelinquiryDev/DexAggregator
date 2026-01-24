@@ -1,4 +1,4 @@
-import { PoolData } from '../infrastructure/adapters/EthersAdapter';
+import { Pool, Token } from '../domain/entities';
 
 // A placeholder for a more complex pricing result
 export interface Quote {
@@ -11,22 +11,22 @@ export interface Quote {
  * For now, this is a placeholder. In a real scenario, this would involve
  * complex calculations considering liquidity, fees, and multi-hop swaps.
  * 
- * @param tokenInAddress The address of the input token
- * @param tokenOutAddress The address of the output token
+ * @param tokenIn The input token
+ * @param tokenOut The output token
  * @param amountIn The amount of the input token
- * @param poolData An array of raw data from the relevant liquidity pools
+ * @param pools An array of relevant liquidity pools
  * @returns The best quote found
  */
 export function calculateBestPrice(
-  tokenInAddress: string,
-  tokenOutAddress: string,
+  tokenIn: Token,
+  tokenOut: Token,
   amountIn: string, 
-  poolData: PoolData[],
+  pools: Pool[],
 ): Quote | null {
-  console.log(`Pricing: Calculating best price for ${amountIn} of ${tokenInAddress} to ${tokenOutAddress}`);
-  console.log(`Pricing: Using data from ${poolData.length} pools.`);
+  console.log(`Pricing: Calculating best price for ${amountIn} of ${tokenIn.symbol} to ${tokenOut.symbol}`);
+  console.log(`Pricing: Using data from ${pools.length} pools.`);
 
-  if (poolData.length === 0) {
+  if (pools.length === 0) {
     return null;
   }
 
@@ -35,7 +35,7 @@ export function calculateBestPrice(
   // for each one, and selecting the best rate.
 
   // For now, we will just return a dummy quote based on the first pool.
-  const firstPool = poolData[0];
+  const firstPool = pools[0];
   const dummyPrice = 1 / (Number(firstPool.sqrtPriceX96) / 2**96)**2;
 
   const quote: Quote = {

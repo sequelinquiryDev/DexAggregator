@@ -7,10 +7,14 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default defineConfig({
+// Use the PORT environment variable provided by the platform, default to 3001
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+
+export default defineConfig(async () => ({
   plugins: [
     react(),
     runtimeErrorOverlay(),
+    // These plugins are only used in development on Replit, so we can conditionally import them
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
@@ -32,9 +36,14 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    // Run on the port specified by the environment variable
+    port: port,
+    // Listen on all network interfaces, which is required for previews to work
+    host: "0.0.0.0",
     proxy: {
+      // Proxy API requests to the backend server
       '/api': {
-        target: 'http://localhost:3001',
+        target: `http://localhost:${port}`,
         changeOrigin: true,
       },
     },
@@ -43,4 +52,4 @@ export default defineConfig({
       deny: ["**/.*"],
     },
   },
-});
+}));

@@ -1,6 +1,6 @@
 import { EthersAdapter } from '../../infrastructure/adapters/EthersAdapter';
 import { StorageService } from './StorageService';
-import { TokenMetadata } from '../../../shared/tokens';
+import { Token } from '../../domain/entities';
 
 export class DiscoveryService {
   constructor(
@@ -10,14 +10,16 @@ export class DiscoveryService {
 
   async discoverPools(): Promise<void> {
     console.log('Starting pool discovery...');
-    const tokens = await this.storageService.read('tokens.json') as TokenMetadata[];
+    const tokens: Token[] = await this.storageService.getTokens();
     const tokensByChain = tokens.reduce((acc, token) => {
       if (!acc[token.chainId]) {
         acc[token.chainId] = [];
       }
       acc[token.chainId].push(token);
       return acc;
-    }, {} as Record<number, TokenMetadata[]>);
+    }, {} as Record<number, Token[]>);
+
+    const feeTiers = [100, 500, 3000, 10000]; // Common Uniswap V3 fee tiers
 
     for (const chainId in tokensByChain) {
       const chainTokens = tokensByChain[chainId];
@@ -33,21 +35,23 @@ export class DiscoveryService {
           const tokenA = chainTokens[i];
           const tokenB = chainTokens[j];
 
-          const poolKey = `${tokenA.address}_${tokenB.address}`;
-          const reversePoolKey = `${tokenB.address}_${tokenA.address}`;
+          for (const fee of feeTiers) {
+            const poolKey = `${tokenA.address}_${tokenB.address}_${fee}`;
+            const reversePoolKey = `${tokenB.address}_${tokenA.address}_${fee}`;
 
-          if (existingPools[poolKey] || existingPools[reversePoolKey]) {
-            continue;
-          }
-
-          try {
-            const poolAddress = await this.ethersAdapter.getPoolAddress(tokenA, tokenB, chainIdNum);
-            if (poolAddress) {
-              existingPools[poolKey] = poolAddress;
-              newPoolsFound++;
+            if (existingPools[poolKey] || existingPools[reversePoolKey]) {
+              continue;
             }
-          } catch (error) {
-            console.error(`Error finding pool for ${tokenA.symbol}-${tokenB.symbol} on chain ${chainIdNum}:`, error.message);
+
+            try {
+              const poolAddress = await this.ethersAdapter.getPoolAddress(tokenA, tokenB, chainIdNum, fee);
+              if (poolAddress) {
+                existingPools[poolKey] = poolAddress;
+                newPoolsFound++;
+              }
+            } catch (error: any) {
+              console.error(`Error finding pool for ${tokenA.symbol}-${tokenB.symbol} on chain ${chainIdNum} with fee ${fee}:`, error.message);
+            }
           }
         }
       }
