@@ -117,3 +117,16 @@ This document outlines the development plan to refactor the application into a s
 - [X] The query key will be dynamic, based on the selected tokens and amount.
 - [X] Implement debouncing on the amount input to prevent excessive API calls.
 - [X] Use TanStack Query's cache as the client-side cache and `Skeleton` components for loading states.
+
+---
+
+## **Phase 5: Final Cleanup and Bug Fixes (Completed)**
+
+*Objective: Address any remaining issues from the major architectural refactor and ensure the application is stable.*
+
+### **Step 5.1: Fix Application Startup Error (Completed)**
+- **Alignment:** Bug Fix
+- **Status:** Complete
+- *Note: The application currently fails to start because `App.tsx` is attempting to import and use the `useSnapshots` hook, which was deleted as part of the Phase 4 refactoring. This step will remove the obsolete code.*
+- [X] Remove the import for `useSnapshots` in `client/src/App.tsx`.
+- [X] Remove the logic that uses the `isOutOfSync` flag returned by the hook.
