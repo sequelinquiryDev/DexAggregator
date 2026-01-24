@@ -1,0 +1,35 @@
+
+> rest-express@1.0.0 dev:client
+> vite
+
+
+> rest-express@1.0.0 dev:server
+> NODE_ENV=development tsx server/index.ts
+
+[33mYou are using Node.js 20.18.1. Vite requires Node.js version 20.19+ or 22.12+. Please upgrade your Node.js version.[39m
+
+  [32m[1mVITE[22m v7.3.0[39m  [2mready in [0m[1m671[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.88.0.3:[1m5173[22m/[39m
+INFURA_API_KEY not found, using public RPC. This may result in rate-limiting.
+ALCHEMY_API_KEY not found, using public RPC. This may result in rate-limiting.
+POLYGON_RPC_URL not found, using public RPC. This may result in rate-limiting.
+Controller: Loading initial token and pool data...
+Starting pool discovery...
+Server is running on port 3001
+Discovering pools for chain ID: 1 with 3 tokens...
+No new pools found for chain ID: 1.
+Discovering pools for chain ID: 137 with 3 tokens...
+Controller: Initial data loaded.
+Error finding pool for WMATIC-USDC on chain 137 with fee 100: bad address checksum (argument="address", value="0x2791Bca1f2de4661ed88A30C99A7a9449Aa84174", code=INVALID_ARGUMENT, version=6.16.0)
+Error finding pool for WMATIC-USDC on chain 137 with fee 500: bad address checksum (argument="address", value="0x2791Bca1f2de4661ed88A30C99A7a9449Aa84174", code=INVALID_ARGUMENT, version=6.16.0)
+Error finding pool for WMATIC-USDC on chain 137 with fee 3000: bad address checksum (argument="address", value="0x2791Bca1f2de4661ed88A30C99A7a9449Aa84174", code=INVALID_ARGUMENT, version=6.16.0)
+Error finding pool for WMATIC-USDC on chain 137 with fee 10000: bad address checksum (argument="address", value="0x2791Bca1f2de4661ed88A30C99A7a9449Aa84174", code=INVALID_ARGUMENT, version=6.16.0)
+Error finding pool for USDC-USDT on chain 137 with fee 100: bad address checksum (argument="address", value="0x2791Bca1f2de4661ed88A30C99A7a9449Aa84174", code=INVALID_ARGUMENT, version=6.16.0)
+Error finding pool for USDC-USDT on chain 137 with fee 500: bad address checksum (argument="address", value="0x2791Bca1f2de4661ed88A30C99A7a9449Aa84174", code=INVALID_ARGUMENT, version=6.16.0)
+Error finding pool for USDC-USDT on chain 137 with fee 3000: bad address checksum (argument="address", value="0x2791Bca1f2de4661ed88A30C99A7a9449Aa84174", code=INVALID_ARGUMENT, version=6.16.0)
+Error finding pool for USDC-USDT on chain 137 with fee 10000: bad address checksum (argument="address", value="0x2791Bca1f2de4661ed88A30C99A7a9449Aa84174", code=INVALID_ARGUMENT, version=6.16.0)
+Found 4 new pools for chain ID: 137. Saving to pools_polygon.json...
+Pool discovery finished.
+Initial pool discovery complete.
