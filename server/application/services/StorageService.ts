@@ -2,7 +2,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Token, Pool } from '../../domain/entities';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+// Resolve data directory relative to the server root
+const DATA_DIR = path.resolve(path.dirname(import.meta.url.replace('file://', '')), '../../data');
 
 export class StorageService {
   async read(fileName: string): Promise<any> {
@@ -15,7 +16,7 @@ export class StorageService {
         // File doesn't exist, return default value for the specific file
         if (fileName.startsWith('pools_')) {
           return {};
-        } else if (fileName === 'tokens.json') {
+        } else if (fileName === 'tokens.json' || fileName.startsWith('tokens_')) {
           return [];
         }
       }
@@ -28,6 +29,19 @@ export class StorageService {
     await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
   }
 
+  /**
+   * Get tokens for a specific network
+   * @param chainId Network chain ID (1 = Ethereum, 137 = Polygon)
+   * @returns Array of tokens for the network
+   */
+  async getTokensByNetwork(chainId: number): Promise<Token[]> {
+    const fileName = `tokens_${chainId === 1 ? 'ethereum' : 'polygon'}.json`;
+    return await this.read(fileName) as Token[];
+  }
+
+  /**
+   * @deprecated Use getTokensByNetwork instead
+   */
   async getTokens(): Promise<Token[]> {
     return await this.read('tokens.json') as Token[];
   }

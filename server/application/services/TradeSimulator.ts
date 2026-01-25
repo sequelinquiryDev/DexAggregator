@@ -39,23 +39,30 @@ export class TradeSimulator {
 
   private getAmountOut(poolState: any, tokenIn: string, amountIn: bigint): bigint | null {
     const zeroForOne = tokenIn === poolState.token0;
-    
-    const sqrtPriceX96 = BigInt(poolState.sqrtPriceX96);
     const liquidity = BigInt(poolState.liquidity);
+    const sqrtPriceX96 = BigInt(poolState.sqrtPriceX96);
+    const fee = poolState.fee || 3000; // Default to 0.3% fee
+    const feeAmount = (amountIn * BigInt(fee)) / 1000000n; // Fee is in basis points
+    const amountInAfterFee = amountIn - feeAmount;
 
+    if (liquidity === 0n) return 0n;
+
+    // Simplified constant product formula: x * y = k
+    // amountOut = (reserve1 * amountInAfterFee) / (reserve0 + amountInAfterFee)
     if (zeroForOne) {
-      const amountInWithFee = amountIn * 997n / 1000n;
-      const newLiquidity = liquidity + amountInWithFee;
-      if (newLiquidity === 0n) return 0n;
-      const newSqrtPriceX96 = (liquidity * sqrtPriceX96) / newLiquidity;
-      const amountOut = liquidity * (sqrtPriceX96 - newSqrtPriceX96) / (sqrtPriceX96 * newSqrtPriceX96);
-      return amountOut > 0n ? amountOut : 0n;
+      // Trading token0 for token1
+      const reserve0 = liquidity;
+      const reserve1 = (sqrtPriceX96 * sqrtPriceX96 * liquidity) / (1n << 192n);
+      const numerator = reserve1 * amountInAfterFee;
+      const denominator = reserve0 + amountInAfterFee;
+      return numerator / denominator;
     } else {
-      const amountInWithFee = amountIn * 997n / 1000n;
-      if (liquidity === 0n) return 0n;
-      const newSqrtPriceX96 = sqrtPriceX96 + amountInWithFee * (1n << 96n) / liquidity;
-      const amountOut = liquidity * (newSqrtPriceX96 - sqrtPriceX96) / (1n << 96n);
-      return amountOut > 0n ? amountOut : 0n;
+      // Trading token1 for token0
+      const reserve1 = liquidity;
+      const reserve0 = (liquidity * (1n << 192n)) / (sqrtPriceX96 * sqrtPriceX96);
+      const numerator = reserve0 * amountInAfterFee;
+      const denominator = reserve1 + amountInAfterFee;
+      return numerator / denominator;
     }
   }
 
