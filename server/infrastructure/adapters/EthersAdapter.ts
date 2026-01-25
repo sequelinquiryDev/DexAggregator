@@ -61,9 +61,17 @@ export class EthersAdapter {
     const poolContract = new ethers.Contract(poolAddress, POOL_ABI, provider);
     const slot0 = await poolContract.slot0();
     const liquidity = await poolContract.liquidity();
+    const token0 = await poolContract.token0();
+    const token1 = await poolContract.token1();
+    const fee = await poolContract.fee();
     return {
+        address: poolAddress,
         liquidity: BigInt(liquidity.toString()),
         sqrtPriceX96: BigInt(slot0.sqrtPriceX96.toString()),
+        token0,
+        token1,
+        fee,
+        timestamp: Math.floor(Date.now() / 1000),
     };
   }
 

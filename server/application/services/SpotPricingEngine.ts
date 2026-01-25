@@ -38,12 +38,28 @@ class SpotPricingEngine {
   }
 
   public findUsdcPool(tokenAddress: string, chainId: number): string | undefined {
-    // This is a placeholder. A real implementation would search the cache
-    // for all pools containing the token and find the most liquid one paired with USDC.
-    if (chainId === 1) {
-      return '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640'; // ETH/USDC 0.05% pool
+    // Common stablecoin addresses by chain
+    const stablecoins: Record<number, string[]> = {
+      1: ['0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', '0x6B175474E89094C44Da98b954EedeAC495271d0F'], // USDC, DAI
+      137: ['0x2791Bca1f2de4661ED88A30C99a7a9449Aa84174', '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'], // USDC, USDT on Polygon
+    };
+
+    const chainStables = stablecoins[chainId] || [];
+    const pools = sharedStateCache.getPoolsForToken(tokenAddress);
+    
+    // Find the pool with the highest liquidity that pairs this token with a stablecoin
+    let bestPool: any = undefined;
+    let maxLiquidity = 0n;
+
+    for (const pool of pools) {
+      const otherToken = pool.token0 === tokenAddress ? pool.token1 : pool.token0;
+      if (chainStables.includes(otherToken) && pool.liquidity > maxLiquidity) {
+        maxLiquidity = pool.liquidity;
+        bestPool = pool;
+      }
     }
-    return undefined;
+
+    return bestPool ? bestPool.address : undefined;
   }
 }
 

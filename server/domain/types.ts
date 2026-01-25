@@ -12,8 +12,11 @@ export interface TokenMetadata {
  * Represents the live, frequently changing state of a liquidity pool.
  */
 export interface PoolState {
+    address: string;
     liquidity: bigint;
     sqrtPriceX96: bigint;
-    token0?: string;
-    token1?: string;
+    token0: string;
+    token1: string;
+    fee?: number;
+    timestamp?: number;
 }

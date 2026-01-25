@@ -65,7 +65,7 @@ const discoveryService = new DiscoveryService(storageService, ethersAdapter);
   }
 })();
 
-const swapController = new SwapController(sharedStateCache);
+const swapController = new SwapController();
 
 // Register the routes
 registerRoutes(app, priceViewerService, swapController);
