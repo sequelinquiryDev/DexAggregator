@@ -1,4 +1,4 @@
-import { Route } from 'wouter';
+import { Route } from 'router';
 import Dashboard from './pages/Dashboard';
 import NotFound from './pages/not-found';
 
